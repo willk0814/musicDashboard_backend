@@ -16,9 +16,10 @@ mongoose
     .then(() => { console.log('Database connected')})
     .catch((error) => { console.log('Error connecting to database:', error)})
 
-// Spotify APi test
-app.listen(port,
-    () => { console.log(`Listening at http://localhost:${port}/`)}
-)
+// listening
+app.listen(port, () => { 
+    console.log(`Local address: http://localhost:${port}/`);
+    console.log(`EC2 instance address: http://18.215.149.105:${port}/`);
+})
 
 app.use("/", routes)

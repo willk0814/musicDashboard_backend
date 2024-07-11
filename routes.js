@@ -104,7 +104,7 @@ async function refreshAccessToken() {
 
 // function to gather the 50 most recently played songs
 async function getRecentlyPlayedTracks() {
-    console.log('Making Api call for recent tracks')
+    console.log('\nMaking Api call for recent tracks')
     try {
         // load and check access tokens
         let tokens = loadTokens();
@@ -157,7 +157,7 @@ async function getRecentlyPlayedTracks() {
 // function to schedule all api calls
 function scheduleApiCalls() {
     console.log('Scheduling API calls');
-    cron.schedule('* * * * *', getRecentlyPlayedTracks);
+    cron.schedule('0 * * * *', getRecentlyPlayedTracks);
 }
 
 // initialize spotify api function 
