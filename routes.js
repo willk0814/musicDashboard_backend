@@ -70,6 +70,19 @@ router.get('/redirect', async (req, res) => {
     }
 })
 
+// API to return the most recent 15 songs that I have listened to
+router.get('/api/recent-tracks', async (req, res) => {
+    try {
+        const recentTracks = await Listen.find()
+            .sort({ playedAt: -1 })
+            .limit(15);
+        res.json(recentTracks);
+    } catch (error) {
+        console.log(`Error fetching recent tracks: ${error}`)
+        res.status(500).json({ error: 'An error occurred while fetching recent tracks' });
+    }
+})
+
 // function to refresh access token
 async function refreshAccessToken() {
     try {
