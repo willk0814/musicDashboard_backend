@@ -12,7 +12,8 @@ const port = 3000;
 // define allowed origins
 const allowedOrigins = [
     'http://localhost:5173',   // local developement front end
-    'https://musicDashboard.willkoenig.info'    // production front end
+    'https://musicDashboard.willkoenig.info',
+    'https://music-dashboard-git-master-willk419-projects.vercel.app/'    // production front end
 ]
 
 // define cors to allow cross origin requests
