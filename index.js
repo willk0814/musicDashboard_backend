@@ -7,7 +7,7 @@ const routes = require("./routes")
 
 // Declare a new express app and a port to use
 const app = express();
-const port = 80;
+const port = 3000;
 
 // define allowed origins
 const allowedOrigins = [
