@@ -16,19 +16,7 @@ const allowedOrigins = [
     'https://music-dashboard-git-master-willk419-projects.vercel.app/'    // production front end
 ]
 
-// define cors to allow cross origin requests
-// app.use(cors({
-//     origin: function (origin, callback) {
-//       // Allow requests with no origin (like mobile apps or curl requests)
-//       if (!origin) return callback(null, true);
-//       if (allowedOrigins.indexOf(origin) === -1) {
-//         var msg = 'The CORS policy for this site does not allow access from the specified Origin.';
-//         return callback(new Error(msg), false);
-//       }
-//       return callback(null, true);
-//     }
-//   }));
-
+// define and use cors options
 const corsOptions = {
   origin: '*', // Replace with your Vercel app's URL
   methods: 'GET,HEAD,PUT,PATCH,POST,DELETE',

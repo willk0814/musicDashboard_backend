@@ -70,19 +70,6 @@ router.get('/redirect', async (req, res) => {
     }
 })
 
-// API to return the most recent 15 songs that I have listened to
-router.get('/api/recent-tracks', async (req, res) => {
-    try {
-        const recentTracks = await Listen.find()
-            .sort({ playedAt: -1 })
-            .limit(15);
-        res.json(recentTracks);
-    } catch (error) {
-        console.log(`Error fetching recent tracks: ${error}`)
-        res.status(500).json({ error: 'An error occurred while fetching recent tracks' });
-    }
-})
-
 // function to refresh access token
 async function refreshAccessToken() {
     try {
@@ -115,7 +102,6 @@ async function refreshAccessToken() {
 
 }
 
-
 // function to gather the 50 most recently played songs
 async function getRecentlyPlayedTracks() {
     console.log(`\nMaking Api call for recent tracks @ 
@@ -140,31 +126,39 @@ async function getRecentlyPlayedTracks() {
             limit: 50
         });
 
+        // create a variable to track how many saves
+        let save_count = 0;
+
         // Process the data and save it
         for (const item of data.body.items){
             // create an object that adheres to our db model
             const listen = {
                 trackId: item.track.id,
                 name: item.track.name,
-                artists: item.track.artists.map(artist => artist.name),
+                artists: item.track.artists.map(artist => ({
+                    name: artist.name,
+                    id: artist.id
+                })),
                 album: item.track.album.name,
+                albumId: item.track.album.id,
                 spotifyLink: item.track.external_urls.spotify,
-                playedAt: new Date(item.played_at)
+                playedAt: new Date(item.played_at),
+                duration: item.track.duration_ms
             };
 
             try {
                 await Listen.create(listen)
-                console.log(`Saved new listen: ${listen.name}`)
+                save_count ++;
             } catch (error) {
                 // check to see if error is a result of a duplicate key
                 if (error.code === 11000) {
-                    console.log(`Already saved listen: ${listen.name}`)
+                    continue;
                 } else {
                     console.log(`Error saving listen: ${listen.name}, ${error.message}`)
                 }
             }
         }
-        console.log('Finished processing recently played tracks')
+        console.log(`Complete Processing Recent Listens, Saved: ${save_count}/50`)
     } catch (error) {
         console.log(`error encountered: ${error}`)
     }
@@ -173,7 +167,8 @@ async function getRecentlyPlayedTracks() {
 // function to schedule all api calls
 function scheduleApiCalls() {
     console.log('Scheduling API calls');
-    cron.schedule('0 * * * *', getRecentlyPlayedTracks);
+    // cron.schedule('0 * * * *', getRecentlyPlayedTracks);
+    cron.schedule('* * * * *', getRecentlyPlayedTracks);
 }
 
 // initialize spotify api function 
@@ -190,6 +185,171 @@ function initializeSpotifyApi() {
         return false;
     }
 }
+
+
+// -- Interfacing with the Front End --
+
+// API to return the most recent 50 songs that I have listened to
+router.get('/api/recent-tracks', async (req, res) => {
+    try {
+        const recentTracks = await Listen.find()
+            .sort({ playedAt: -1 })
+            .limit(50);
+        res.json(recentTracks);
+    } catch (error) {
+        console.log(`Error fetching recent tracks: ${error}`)
+        res.status(500).json({ error: 'An error occurred while fetching recent tracks' });
+    }
+});
+
+// API to return my most listened to artist of the last week
+router.get('/api/top-artist', async (req, res) => {
+    try {
+        // define the date for one week ago
+        const oneWeekAgo = new Date();
+        oneWeekAgo.setDate(oneWeekAgo.getDate() - 7);
+
+        // define parameters 
+        const topArtists = await Listen.aggregate([
+            // include only listens in the last week
+            { $match: { playedAt: { $gte: oneWeekAgo }}},
+            // create a new element for each element in artist array
+            { $unwind: '$artists'},
+            // group documents according to artist
+            { $group: {
+                _id: '$artists',
+                listens: { $sum: 1 }
+            }},
+            // sort by number of listens (descending) and then by artist name ascending
+            { $sort: { listens: -1, _id: 1 }},
+            // limit response to one result
+            { $limit: 1 }
+        ]);
+
+        // check if any artist was found
+        if (topArtists.length > 0){
+            res.json({ artist: topArtists[0]._id, listens: topArtists[0].listens });
+        } else {
+            res.json({ message: 'No artist found in the past week' });
+        }
+
+    } catch (error) {
+        console.log(`Error fetching top artist: ${error}`);
+        res.status(500).json({ error: 'An error occurred while fetching top artist' });
+    }
+});
+
+// API to return my most listened song of the past week
+router.get('/api/top-song', async (req, res) => {
+    try {
+        // define the date for one week ago
+        const oneWeekAgo = new Date();
+        oneWeekAgo.setDate(oneWeekAgo.getDate() - 7);
+
+        // aggregate to find the top song
+        const topSongs = await Listen.aggregate([
+            // include only listens in the last week
+            { $match: { playedAt: { $gte: oneWeekAgo }}},
+            // group documents according to song
+            { $group: {
+                _id: { trackId: '$trackId', name: '$name' },
+                listens: { $sum: 1 }
+            }},
+            // sort by number of listens (descending) and then by song name
+            { $sort: { listens: -1, '_id.name': 1 }},
+            // limit to one result
+            { $limit: 1 }
+        ]);
+
+        // Check if any song was found
+        if (topSongs.length > 0) {
+            res.json({ 
+                song: topSongs[0]._id.name,
+                trackId: topSongs[0]._id.trackId,
+                listens: topSongs[0].listens 
+            });
+        } else {
+            res.json({ message: 'No songs found in the past week' });
+        }
+    } catch (error) {
+        console.log(`Error fetching top song: ${error}`)
+        res.status(500).json({ error: 'An error occurred while fetching top song' });
+    }
+});
+
+// API to return my most listened album of the past week
+router.get('/api/top-album', async (req, res) => {
+    try {
+        // define the date for one week ago
+        const oneWeekAgo = new Date();
+        oneWeekAgo.setDate(oneWeekAgo.getDate() - 7);
+
+        // aggregate to find top album
+        const topAlbums = await Listen.aggregate([
+            // include only listens in the last week
+            { $match: { playedAt: { $gte: oneWeekAgo }}},
+            // group documents according to album
+            { $group: {
+                _id: { albumId: '$albumId', album: '$album'},
+                listens: { $sum: 1 }
+            }},
+            // sort by the number of listens (descending) then alphabetically
+            { $sort: { listens: -1, '_id.album': 1 }},
+            // limit the result to 1 element
+            { $limit: 1 }
+        ]);
+
+        // confirm that we found an album
+        if (topAlbums.length > 0) {
+            res.json({
+                album: topAlbums[0]._id.album,
+                albumId: topAlbums[0]._id.albumId,
+                listens: topAlbums[0].listens
+            });
+        } else {
+            res.json({ message: 'No album found' });
+        }
+
+    } catch (error) {
+        console.log(`Error fetching top album data`);
+        res.status(500).json({ error: 'Error fetching top album data' });
+    }
+});
+
+// API to return my listening statistics
+router.get('/api/listening-stats', async (req, res) => {
+    try {
+        // define the date for a week ago
+        const oneWeekAgo = new Date();
+        oneWeekAgo.setDate(oneWeekAgo.getDate() - 7);
+
+        // aggregate to find the return value
+        const listening_time = await Listen.aggregate([
+            // only listeing done in the last week
+            { $match: { playedAt: { $gte: oneWeekAgo }}},
+            // group all documents
+            { $group: {
+                _id: null,
+                totalDuration: { $sum: '$duration'}
+            }}
+        ]);
+
+        // confirm that stats were available
+        if (listening_time.length > 0){
+            // determine the nearest whole minute
+            const minutes = Math.round(listening_time[0].totalDuration / 60000);
+            res.json({ totalListeningTime: {
+                minutes: minutes
+            }});
+        } else {
+            res.json({ message: 'Could not find listening stats'})
+        }
+
+    } catch (error) {
+        console.log(`Error fetching listening statistics: ${error}`);
+        res.status(500).json({ error: 'Error fetching listening data' });
+    }
+});
 
 initializeSpotifyApi();
 
