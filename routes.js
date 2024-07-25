@@ -205,30 +205,31 @@ router.get('/api/recent-tracks', async (req, res) => {
 // API to return my most listened to artist of the last week
 router.get('/api/top-artist', async (req, res) => {
     try {
-        // define the date for one week ago
+        // Define the date for one week ago
         const oneWeekAgo = new Date();
         oneWeekAgo.setDate(oneWeekAgo.getDate() - 7);
 
-        // define parameters 
+        // Define parameters 
         const topArtists = await Listen.aggregate([
-            // include only listens in the last week
+            // Include only listens in the last week
             { $match: { playedAt: { $gte: oneWeekAgo }}},
-            // create a new element for each element in artist array
-            { $unwind: '$artists'},
-            // group documents according to artist
+            // Create a new element for each element in artist array
+            { $unwind: '$artists' },
+            // Group documents by artist's name
             { $group: {
-                _id: '$artists',
+                _id: '$artists.name',
+                artistId: { $first: '$artists.id' }, // Assuming id should be taken from the first artist occurrence
                 listens: { $sum: 1 }
             }},
-            // sort by number of listens (descending) and then by artist name ascending
+            // Sort by number of listens (descending) and then by artist name ascending
             { $sort: { listens: -1, _id: 1 }},
-            // limit response to one result
+            // Limit response to one result
             { $limit: 1 }
         ]);
 
-        // check if any artist was found
+        // Check if any artist was found
         if (topArtists.length > 0){
-            res.json({ artist: topArtists[0]._id, listens: topArtists[0].listens });
+            res.json({ artist: topArtists[0]._id, artistId: topArtists[0].artistId, listens: topArtists[0].listens });
         } else {
             res.json({ message: 'No artist found in the past week' });
         }
