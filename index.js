@@ -9,6 +9,7 @@ const routes = require("./routes")
 const app = express();
 const port = 3000;
 
+
 // define allowed origins
 const allowedOrigins = [
     'http://localhost:5173',   // local developement front end
@@ -18,19 +19,26 @@ const allowedOrigins = [
 
 // define and use cors options
 const corsOptions = {
-  origin: '*', // Replace with your Vercel app's URL
-  methods: 'GET,HEAD,PUT,PATCH,POST,DELETE',
-  credentials: true,
-  optionsSuccessStatus: 204
- };
- 
- app.use(cors(corsOptions));
+    origin: '*', // Replace with your Vercel app's URL
+    methods: 'GET,HEAD,PUT,PATCH,POST,DELETE',
+    credentials: true,
+    optionsSuccessStatus: 204
+};
+
+app.use(cors(corsOptions));
+
+// define a middleware to log requests
+const logRequests = (req, res, next) => {
+    console.log(`[${new Date().toISOString()}] ${req.method} ${req.url}`);
+    next();
+};
+app.use(logRequests)
 
 // Connect to database
 mongoose
-    .connect(process.env.URI, {dbName: 'listeningHistory'})
-    .then(() => { console.log('Database connected')})
-    .catch((error) => { console.log('Error connecting to database:', error)})
+.connect(process.env.URI, {dbName: 'listeningHistory'})
+.then(() => { console.log('Database connected')})
+.catch((error) => { console.log('Error connecting to database:', error)})
 
 // listening
 app.listen(port, () => { 
