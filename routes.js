@@ -167,8 +167,8 @@ async function getRecentlyPlayedTracks() {
 // function to schedule all api calls
 function scheduleApiCalls() {
     console.log('Scheduling API calls');
-    // cron.schedule('0 * * * *', getRecentlyPlayedTracks);
-    cron.schedule('* * * * *', getRecentlyPlayedTracks);
+    cron.schedule('0 * * * *', getRecentlyPlayedTracks);
+    // cron.schedule('* * * * *', getRecentlyPlayedTracks);
 }
 
 // initialize spotify api function 
