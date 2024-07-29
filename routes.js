@@ -237,7 +237,27 @@ router.get('/api/top-artist', async (req, res) => {
 
         // Check if any artist was found
         if (topArtists.length > 0){
-            res.json({ artist: topArtists[0]._id, artistId: topArtists[0].artistId, listens: topArtists[0].listens });
+
+            const topArtist = topArtists[0];
+
+            // ensure that the access token is fresh
+            let tokens = loadTokens();
+            if (Date.now() > tokens.expires_at - 30000){
+                await refreshAccessToken();
+                tokens = loadTokens();
+            }
+            // set api tokens
+            spotifyApi.setAccessToken(tokens.access_token);
+
+            // fetch artist info from spotify -> define image
+            const artistInfo = await spotifyApi.getArtist(topArtist.artistId);
+            const imgURL = artistInfo.body.images[1].url;
+
+            res.json({ 
+                artist: topArtists[0]._id, 
+                artistId: topArtists[0].artistId, 
+                listens: topArtists[0].listens,
+                imgURL: imgURL});
         } else {
             res.json({ message: 'No artist found in the past week' });
         }
