@@ -173,10 +173,10 @@ function scheduleApiCalls() {
     console.log('Scheduling API calls');
     
     // at the top of every hour
-    // cron.schedule('0 * * * *', getRecentlyPlayedTracks);
+    cron.schedule('0 * * * *', getRecentlyPlayedTracks);
     
     // every minute
-    cron.schedule('* * * * *', getRecentlyPlayedTracks);
+    // cron.schedule('* * * * *', getRecentlyPlayedTracks);
 }
 
 // initialize spotify api function 
@@ -321,7 +321,8 @@ router.get('/api/top-album', async (req, res) => {
             // group documents according to album
             { $group: {
                 _id: { albumId: '$albumId', album: '$album'},
-                listens: { $sum: 1 }
+                listens: { $sum: 1 },
+                imgURL: { $first: '$imgURL' }
             }},
             // sort by the number of listens (descending) then alphabetically
             { $sort: { listens: -1, '_id.album': 1 }},
@@ -334,7 +335,8 @@ router.get('/api/top-album', async (req, res) => {
             res.json({
                 album: topAlbums[0]._id.album,
                 albumId: topAlbums[0]._id.albumId,
-                listens: topAlbums[0].listens
+                listens: topAlbums[0].listens,
+                imgURL: topAlbums[0].imgURL
             });
         } else {
             res.json({ message: 'No album found' });
