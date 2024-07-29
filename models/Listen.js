@@ -11,6 +11,7 @@ const listenSchema = new mongoose.Schema({
     album: { type: String, required: true },
     albumId: { type: String, required: true },
     spotifyLink: { type: String, required: true },
+    imgURL: { type: String, required: true },
     playedAt: { type: Date, required: true, unique: true },
     duration: { type: Number, required: true }
 }, { collection: 'listens' });

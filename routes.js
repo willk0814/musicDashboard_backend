@@ -126,6 +126,9 @@ async function getRecentlyPlayedTracks() {
             limit: 50
         });
 
+        // lets print out the first item that we got back
+        // console.log(`Individual data item: \n${JSON.stringify(data.body.items[0].track.album.images[1])}`);
+
         // create a variable to track how many saves
         let save_count = 0;
 
@@ -142,6 +145,7 @@ async function getRecentlyPlayedTracks() {
                 album: item.track.album.name,
                 albumId: item.track.album.id,
                 spotifyLink: item.track.external_urls.spotify,
+                imgURL: item.track.album.images[1].url,
                 playedAt: new Date(item.played_at),
                 duration: item.track.duration_ms
             };
@@ -167,8 +171,12 @@ async function getRecentlyPlayedTracks() {
 // function to schedule all api calls
 function scheduleApiCalls() {
     console.log('Scheduling API calls');
-    cron.schedule('0 * * * *', getRecentlyPlayedTracks);
-    // cron.schedule('* * * * *', getRecentlyPlayedTracks);
+    
+    // at the top of every hour
+    // cron.schedule('0 * * * *', getRecentlyPlayedTracks);
+    
+    // every minute
+    cron.schedule('* * * * *', getRecentlyPlayedTracks);
 }
 
 // initialize spotify api function 
@@ -253,7 +261,7 @@ router.get('/api/top-song', async (req, res) => {
             { $match: { playedAt: { $gte: oneWeekAgo }}},
             // group documents according to song
             { $group: {
-                _id: { trackId: '$trackId', name: '$name' },
+                _id: { trackId: '$trackId', name: '$name', imgURL: '$imgURL' },
                 listens: { $sum: 1 }
             }},
             // sort by number of listens (descending) and then by song name
@@ -267,7 +275,8 @@ router.get('/api/top-song', async (req, res) => {
             res.json({ 
                 song: topSongs[0]._id.name,
                 trackId: topSongs[0]._id.trackId,
-                listens: topSongs[0].listens 
+                listens: topSongs[0].listens,
+                imgURL: topSongs[0]._id.imgURL 
             });
         } else {
             res.json({ message: 'No songs found in the past week' });
